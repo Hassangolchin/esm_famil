@@ -1,0 +1,25 @@
+{
+  "name": "hassan",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "biguint-format": "^1.0.0",
+    "body-parser": "^1.18.2",
+    "crypto": "^1.0.1",
+    "express": "^4.16.3",
+    "express-session": "^1.15.6",
+    "http": "0.0.0",
+    "https": "^1.0.0",
+    "jalali-moment": "^3.0.10",
+    "moment-jalali": "^0.3.9",
+    "mongoose": "^5.0.10",
+    "nodemon": "^1.17.2",
+    "telegram-bot-manager": "^1.2.0"
+  }
+}
