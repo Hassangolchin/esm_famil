@@ -68,13 +68,17 @@ const text = {
 /////////////////////////////////////////////////////////////////////
 
 let user = new mongoose.Schema({
+    counter:{
+        type:Number,
+        default:0,
+    },
     own_name:String,
     own_last_name:String,
     name:String,
     username:String,
     vip:String,
     user_id:Number,
-    rating:[],
+    rating:[{}],
     point:{
         type:Number,
         default:0
@@ -88,7 +92,7 @@ let user = new mongoose.Schema({
         type:String,
         default:'begin'
     },
-    fake_point:[],
+    fake_point:[{}],
     message_id:Number,
     callback:Number,
     first_name:String,
@@ -998,7 +1002,7 @@ function random(randomnumber) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-function find_main(update, res) {
+function find_main(update, res, o) {
     let promise1 = new Promise(((resolve, reject) => {
         let a;
         usermodeluser.findOne({user_id: res['user_id']}, (err, rese) => {
@@ -1020,7 +1024,7 @@ function find_main(update, res) {
                                 resi['members'].forEach((user_id) => {
                                     if (user_id['user_id'] === rese['user_id']) {
                                         if (update['message']['text'][0] === resi['alphabet']) {
-                                            reso['first_name'].forEach((name) => {
+                                            reso[o].forEach((name) => {
                                                 if (name === update['message']['text']) {
                                                     a = 1;
                                                 }
@@ -1051,6 +1055,164 @@ function find_main(update, res) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
+function call_idk(now, last, o, lvl) {
+        this.now = now;
+        this.last = last;
+        this.o = o;
+        this.lvl = lvl;
+        this.func = function(update){
+            usermodeluser.findOne({user_id:update['callback_query']['from']['id']}, (err, rese) => {
+                if(err){
+                    throw err;
+                }
+                else{
+                    usermodellobby.findOne({name:rese['name']}, (err, res) => {
+                        if(err){
+                            throw err;
+                        }
+                        else {
+                            bot.sendMessage({
+                                chat_id: update['callback_query']['from']['id'],
+                                text: now + '\t' + res['alphabet'] + ':',
+                                reply_markup: {
+                                    inline_keyboard: [
+                                        [
+                                            {
+                                                text: strs.main_menu.idk,
+                                                callback_data: strs.main_menu.idk
+                                            }, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
+                                        ]
+                                    ]
+                                }
+                            }).then((res) => {
+                                usermodeluser.update({user_id: rese['user_id']}, {message_id: res['result']['message_id']}, (err, res) => {
+                                    if (err) {
+                                        throw err;
+                                    }
+                                })
+                            });
+                            bot.editMessageText({
+                                chat_id: update['callback_query']['from']['id'],
+                                message_id: update['callback_query']['message']['message_id'],
+                                text: text.idk0point + '\n' + last + '\t' + res['alphabet'] + ':',
+                            });
+                            rese[o] = strs.main_menu.idk + '\t' + 0;
+                            rese.save();
+                            res['members'].forEach((id) => {
+                                if (id['user_id'] === rese['user_id']) {
+                                    usermodeluser.update({user_id: rese['user_id']}, {level: lvl}, (err, res) => {
+                                        if (err) {
+                                            throw err;
+                                        }
+                                    });
+                                }
+                            });
+
+                        }
+                    });
+                }
+            });
+        };
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+function call_help(now, last, o, lvl) {
+    this.now = now;
+    this.last = last;
+    this.o = o;
+    this.lvl = lvl;
+    this.func = function(update){
+        usermodeluser.findOne({user_id:update['callback_query']['from']['id']}, (err, rese) => {
+            if(err){
+                throw err;
+            }
+            else{
+                usermodellobby.findOne({name:rese['name']}, (err, res) => {
+                    if(err){
+                        throw err;
+                    }
+                    else {
+                        if (rese['coin'] === 0) {
+                            rese[o] = 0;
+                            rese.save();
+                            bot.sendMessage({
+                                chat_id: update['callback_query']['from']['id'],
+                                text: text.you_dont_have_enough_coin + '\n' + now + '\t' + res['alphabet'] + ':',
+                                reply_markup: {
+                                    inline_keyboard: [
+                                        [
+                                            {
+                                                text: strs.main_menu.idk,
+                                                callback_data: strs.main_menu.idk
+                                            }, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
+                                        ]
+                                    ]
+                                }
+                            }).then((res) => {
+                                usermodeluser.update({user_id: rese['user_id']}, {message_id: res['result']['message_id']}, (err, res) => {
+                                    if (err) {
+                                        throw err;
+                                    }
+                                })
+                            });
+                            bot.editMessageText({
+                                chat_id: update['callback_query']['from']['id'],
+                                message_id: update['callback_query']['message']['message_id'],
+                                text: last + '\t' + res['alphabet'] + ':',
+                            });
+                            usermodeluser.update({user_id: rese['user_id']}, {level:lvl}, (err, res) => {
+                                if (err) {
+                                    throw err;
+                                }
+                            });
+                        }
+                        else {
+                            rese['counter']++;
+                            rese.save();
+                            rese[o] = 10;
+                            rese['coin'] = rese['coin'] - 1;
+                            rese['fake_point'] = rese['counter']*10;
+                            rese.save();
+                            usermodeluser.update({user_id: rese['user_id']}, {level: lvl}, (err, res) => {
+                                if (err) {
+                                    throw err;
+                                }
+                            });
+                            bot.sendMessage({
+                                chat_id: update['callback_query']['from']['id'],
+                                text: now + '\t' + res['alphabet'] + ':',
+                                reply_markup: {
+                                    inline_keyboard: [
+                                        [
+                                            {
+                                                text: strs.main_menu.idk,
+                                                callback_data: strs.main_menu.idk
+                                            }, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
+                                        ]
+                                    ]
+                                }
+                            }).then((res) => {
+                                usermodeluser.update({user_id: rese['user_id']}, {message_id: res['result']['message_id']}, (err, res) => {
+                                    if (err) {
+                                        throw err;
+                                    }
+                                })
+                            });
+                            bot.editMessageText({
+                                chat_id: update['callback_query']['from']['id'],
+                                message_id: update['callback_query']['message']['message_id'],
+                                text: last + '\t' + res['alphabet'] + ':',
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    };
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 function callback(update) {
     usermodeluser.findOne({user_id:update['callback_query']['from']['id']}, (err, rese) => {
@@ -1064,1169 +1226,92 @@ function callback(update) {
                 }
                 else{
                     if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game2'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.last_name_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.name_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['first_name'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game3'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.last_name_with, text.name_with, 'first_name', 'accident_game3');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game2'){
-                        if(rese['coin'] === 0){
-                            rese['first_name'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.last_name_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.name_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game3'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['first_name'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game3'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.last_name_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.name_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.last_name_with, text.name_with, 'first_name', 'accident_game3')
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game3'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.color_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.last_name_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['last_name'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game4'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.color_with, text.last_name_with, 'last_name', 'accident_game4');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game3'){
-                        if(rese['coin'] === 0){
-                            rese['last_name'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.color_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.last_name_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game4'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['last_name'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game4'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.color_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.last_name_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.color_with, text.last_name_with, 'last_name', 'accident_game4');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game4'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.food_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.color_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['color'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game5'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.food_with, text.color_with, 'color', 'accident_game5');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game4'){
-                        if(rese['coin'] === 0){
-                            rese['color'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.food_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.color_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game5'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['color'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game5'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.food_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.color_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.food_with, text.color_with, 'color', 'accident_game5');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game5'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.animal_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.food_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['food'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game6'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.animal_with, text.food_with, 'food', 'accident_game6');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game5'){
-                        if(rese['coin'] === 0){
-                            rese['food'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.animal_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.food_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game6'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['food'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game6'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.animal_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.food_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.animal_with, text.food_with, 'food', 'accident_game6');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game6'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.city_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.animal_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['animal'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game7'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.city_with, text.animal_with, 'animal', 'accident_game7');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game6'){
-                        if(rese['coin'] === 0){
-                            rese['animal'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.city_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.animal_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game7'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['animal'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game7'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.city_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.animal_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.city_with, text.animal_with, 'animal', 'accident_game7');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game7'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.country_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.city_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['city'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game8'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.country_with, text.animal_with, 'city', 'accident_game8');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game7'){
-                        if(rese['coin'] === 0){
-                            rese['city'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.country_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.city_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game8'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['city'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game8'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.country_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.city_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_idk(text.country_with, text.animal_with, 'city', 'accident_game8');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game8'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.car_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.country_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['country'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game9'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.car_with, text.country_with, 'country', 'accident_game9');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game8'){
-                        if(rese['coin'] === 0){
-                            rese['country'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.car_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.country_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game9'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['country'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game9'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.car_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.country_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.car_with, text.country_with, 'country', 'accident_game9');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game9'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.fruit_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.car_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['car'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game10'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.fruit_with, text.car_with, 'car', 'accident_game10');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game9'){
-                        if(rese['coin'] === 0){
-                            rese['car'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.fruit_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.car_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game10'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['car'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game10'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.fruit_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.car_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.fruit_with, text.car_with, 'car', 'accident_game10');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game10'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.flower_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.fruit_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['fruit'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game11'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.flower_with, text.fruit_with, 'fruit', 'accident_game11');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game10'){
-                        if(rese['coin'] === 0){
-                            rese['fruit'] = text.you_dont_have_enough_coin;
-                            rese.save()
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.flower_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.fruit_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game11'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['fruit'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game11'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.flower_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.fruit_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.flower_with, text.fruit_with, 'fruit', 'accident_game11');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game11'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.things_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.flower_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['flower'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game12'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.things_with, text.flower_with, 'flower', 'accident_game12');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game11'){
-                        if(rese['coin'] === 0){
-                            rese['flower'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.things_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.flower_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game12'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['flower'] = strs.main_menu.help+'\t'+10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game12'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.things_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.flower_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.things_with, text.flower_with, 'flower', 'accident_game12');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game12'){
-                        bot.sendMessage({
-                            chat_id:update['callback_query']['from']['id'],
-                            text:text.organ_with+'\t'+res['alphabet']+ ':',
-                            reply_markup:{
-                                inline_keyboard:[
-                                    [
-                                        {text:strs.main_menu.idk, callback_data:strs.main_menu.idk},{text:strs.main_menu.help, callback_data:strs.main_menu.help}
-                                    ]
-                                ]
-                            }
-                        }).then((res) => {
-                            usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                if(err){
-                                    throw err;
-                                }
-                            })
-                        });
-                        bot.editMessageText({
-                            chat_id:update['callback_query']['from']['id'],
-                            message_id:update['callback_query']['message']['message_id'],
-                            text:text.idk0point+'\n'+text.things_with+'\t'+res['alphabet']+ ':',
-                        });
-                        rese['things'] = strs.main_menu.idk+'\t'+0;
-                        rese.save();
-                        res['members'].forEach((id) =>{
-                            if(id['user_id'] === rese['user_id']){
-                                usermodeluser.update({user_id:rese['user_id']}, {level:'accident_game13'}, (err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                });
-                            }
-                        });
+                        const callback = new call_idk(text.organ_with, text.things_with, 'things', 'accident_game13');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.help && rese['level'] === 'accident_game12'){
-                        if(rese['coin'] === 0){
-                            rese['things'] = text.you_dont_have_enough_coin;
-                            rese.save();
-                            bot.sendMessage({
-                                chat_id:update['callback_query']['from']['id'],
-                                text:text.you_dont_have_enough_coin+'\n'+ text.organ_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text:strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data:strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.things_with+'\t'+res['alphabet']+ ':',
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game13'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                        }
-                        else {
-                            rese['things'] = strs.main_menu.help+'\t'+10;
-                            rese['coin'] = rese['coin'] - 1;
-                            rese['fake_point'] = rese['fake_point'] + 10;
-                            rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                }
-                            });
-                            usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game13'}, (err, res) => {
-                                if (err) {
-                                    throw err;
-                                }
-                            });
-                            bot.sendMessage({
-                                chat_id: update['callback_query']['from']['id'],
-                                text: text.organ_with + '\t' + res['alphabet'] + ':',
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [
-                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help,callback_data: strs.main_menu.help}
-                                        ]
-                                    ]
-                                }
-                            }).then((res) => {
-                                usermodeluser.update({user_id:rese['user_id']}, {message_id:res['result']['message_id']} ,(err, res) => {
-                                    if(err){
-                                        throw err;
-                                    }
-                                })
-                            });
-                            bot.editMessageText({
-                                chat_id:update['callback_query']['from']['id'],
-                                message_id:update['callback_query']['message']['message_id'],
-                                text:text.things_with+'\t'+res['alphabet']+ ':',
-                            });
-                        }
+                        const callback = new call_help(text.organ_with, text.things_with, 'things', 'accident_game13');
+                        return(callback.func(update));
                     }
                     else if(update['callback_query']['data'] === strs.main_menu.idk && rese['level'] === 'accident_game13'){
                         bot.sendMessage({
@@ -2288,15 +1373,12 @@ function callback(update) {
                             });
                         }
                         else {
+                            rese['counter']++;
+                            rese.save();
+                            rese['coin'] = rese['coin'] - 1;
+                            rese['fake_point'] = rese['counter']*10;
                             rese['organ'] = strs.main_menu.help+'\t'+10;
                             rese.save();
-                            res['members'].forEach((id) => {
-                                if (id['user_id'] === rese['user_id']) {
-                                    rese['coin'] = rese['coin'] - 1;
-                                    rese['fake_point'] = rese['fake_point'] + 10;
-                                    rese.save();
-                                }
-                            });
                             usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game14'}, (err, res) => {
                                 if (err) {
                                     throw err;
@@ -2330,1037 +1412,179 @@ function callback(update) {
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
+function accidentgame(now , last, o, lvl) {
+    this.now = now;
+    this.last = last;
+    this.o = o;
+    this.lvl = lvl;
+    this.func = function (update, res, o) {
+        this.o = o;
+        usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
+            if(err){
+                throw err;
+            }
+            else{
+                usermodelmain.findOne({name:res['name']}, (err, reso) => {
+                    if(err){
+                        throw err;
+                    }
+                    else{
+                        usermodellobby.findOne({name:res['name']}, (err, resi) => {
+                            if(err){
+                                throw err;
+                            }
+                            else {
+                                find_main(update, res, o)
+                                    .then((resq) => {
+                                        if (resq === 1) {
+                                            rese['counter']++;
+                                            rese.save();
+                                            rese[o] = update['message']['text']+'\t'+10;
+                                            rese['fake_point'] = rese['counter']*10;
+                                            rese.save();
+                                            bot.sendMessage({
+                                                chat_id: rese['user_id'],
+                                                text: now + '\t' + resi['alphabet'] + ':',
+                                                reply_markup: {
+                                                    inline_keyboard: [
+                                                        [
+                                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
+                                                        ]
+                                                    ]
+                                                }
+                                            }).then((resq) => {
+                                                usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
+                                                    if(err){
+                                                        throw err;
+                                                    }
+                                                });
+                                            });
+                                            bot.editMessageText({
+                                                chat_id:rese['user_id'],
+                                                message_id:rese['message_id'],
+                                                text: last +'\t'+resi['alphabet']+':',
+                                            });
+                                            usermodeluser.update({user_id: rese['user_id']}, {level: lvl}, (err, res) => {
+                                                if (err) {
+                                                    throw err;
+                                                }
+                                            });
+                                        }
+                                        else if (resq === 2) {
+                                            rese[o] = update['message']['text']+'\t'+0;
+                                            rese.save();
+                                            bot.sendMessage({
+                                                chat_id: rese['user_id'],
+                                                text: now + '\t' + resi['alphabet'] + ':',
+                                                reply_markup: {
+                                                    inline_keyboard: [
+                                                        [
+                                                            {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
+                                                        ]
+                                                    ]
+                                                }
+                                            }).then((resq) => {
+                                                usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
+                                                    if(err){
+                                                        throw err;
+                                                    }
+                                                });
+                                            });
+                                            bot.editMessageText({
+                                                chat_id:rese['user_id'],
+                                                message_id:rese['message_id'],
+                                                text:last+'\t'+resi['alphabet']+':',
+                                            });
+                                            usermodeluser.update({user_id: rese['user_id']}, {level: lvl}, (err, res) => {
+                                                if (err) {
+                                                    throw err;
+                                                }
+                                            });
+                                        }
+                                    });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
 function accident_game2(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['first_name'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.last_name_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.name_with+'\t'+resi['alphabet']+':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game3'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['first_name'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.last_name_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.name_with+'\t'+resi['alphabet']+':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game3'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.last_name_with , text.name_with, 'first_name', 'accident_game3');
+    return(acc_game.func(update, res, 'first_name'));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 
 function accident_game3(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['last_name'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.color_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.last_name_with+'\t'+resi['alphabet']+':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game4'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['last_name'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.color_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id: rese['user_id']}, {message_id: resq['result']['message_id']}, (err, res) => {
-                                                if (err) {
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                            bot.editMessageText({
-                                                chat_id: rese['user_id'],
-                                                message_id: rese['message_id'],
-                                                text: text.last_name_with + '\t' + resi['alphabet'] + ':',
-                                            });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game4'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.color_with , text.last_name_with, 'last_name', 'accident_game4');
+    return(acc_game.func(update, res, 'last_name'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game4(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['color'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.food_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:res['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.color_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game5'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['color'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.food_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.color_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game5'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.food_with , text.color_with, 'color', 'accident_game5');
+    return(acc_game.func(update, res, 'color'));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 function accident_game5(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['food'] = update['message']['text']+'\t'+10;
-                                        rese['fake_point'] = rese['fake_point'] + +10;
-                                        rese.save();
-                                        console.log(rese['fake_point']);
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.animal_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:res['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.food_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game6'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['food'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.animal_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.food_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game6'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.animal_with , text.food_with, 'food', 'accident_game6');
+    return(acc_game.func(update, res, 'food'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game6(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['animal'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.city_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.animal_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game7'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['animal'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.city_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.animal_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game7'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.city_with , text.animal_with, 'animal', 'accident_game7');
+    return(acc_game.func(update, res, 'animal'));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 function accident_game7(update, res) {
-    usermodeluser.findOne({user_id: res['user_id']}, (err, rese) => {
-        if (err) {
-            throw err;
-        }
-        else {
-            usermodelmain.findOne({name: res['name']}, (err, reso) => {
-                if (err) {
-                    throw err;
-                }
-                else {
-                    usermodellobby.findOne({name: res['name']}, (err, resi) => {
-                        if (err) {
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['city'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.country_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {
-                                                            text: strs.main_menu.idk,
-                                                            callback_data: strs.main_menu.idk
-                                                        }, {
-                                                        text: strs.main_menu.help,
-                                                        callback_data: strs.main_menu.help
-                                                    }
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id: rese['user_id'],
-                                            message_id: rese['message_id'],
-                                            text: text.city_with + '\t' + resi['alphabet'] + ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game8'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['city'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.country_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {
-                                                            text: strs.main_menu.idk,
-                                                            callback_data: strs.main_menu.idk
-                                                        }, {
-                                                        text: strs.main_menu.help,
-                                                        callback_data: strs.main_menu.help
-                                                    }
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id: rese['user_id'],
-                                            message_id: rese['message_id'],
-                                            text: text.city_with + '\t' + resi['alphabet'] + ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game8'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.country_with, text.city_with, 'city', 'accident_game8');
+    return(acc_game.func(update, res, 'city'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game8(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['country'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.car_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.country_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game9'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['country'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.car_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.country_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game9'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.car_with, text.country_with, 'country', 'accident_game9');
+    return(acc_game.func(update, res, 'country'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game9(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['car'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.fruit_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.car_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game10'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['car'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.fruit_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.car_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game10'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.fruit_with, text.car_with, 'car', 'accident_game10');
+    return(acc_game.func(update, res, 'car'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game10(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['fruit'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.flower_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.fruit_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game11'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['fruit'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.flower_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.fruit_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game11'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.flower_with, text.fruit_with, 'fruit', 'accident_game11');
+    return(acc_game.func(update, res, 'fruit'));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 function accident_game11(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['flower'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.things_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.flower_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game12'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['flower'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.things_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.flower_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game12'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.things_with , text.flower_with, 'flower', 'accident_game12');
+    return(acc_game.func(update, res, 'flower'));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 function accident_game12(update, res) {
-    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
-        if(err){
-            throw err;
-        }
-        else{
-            usermodelmain.findOne({name:res['name']}, (err, reso) => {
-                if(err){
-                    throw err;
-                }
-                else{
-                    usermodellobby.findOne({name:res['name']}, (err, resi) => {
-                        if(err){
-                            throw err;
-                        }
-                        else {
-                            find_main(update, res)
-                                .then((resq) => {
-                                    if (resq === 1) {
-                                        rese['things'] = update['message']['text']+'\t'+10;
-                                        rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.organ_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.things_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game13'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    else if (resq === 2) {
-                                        rese['things'] = update['message']['text']+'\t'+0;
-                                        rese.save();
-                                        bot.sendMessage({
-                                            chat_id: rese['user_id'],
-                                            text: text.organ_with + '\t' + resi['alphabet'] + ':',
-                                            reply_markup: {
-                                                inline_keyboard: [
-                                                    [
-                                                        {text: strs.main_menu.idk, callback_data: strs.main_menu.idk}, {text: strs.main_menu.help, callback_data: strs.main_menu.help}
-                                                    ]
-                                                ]
-                                            }
-                                        }).then((resq) => {
-                                            usermodeluser.update({user_id:rese['user_id']}, {message_id:resq['result']['message_id']},(err, res) => {
-                                                if(err){
-                                                    throw err;
-                                                }
-                                            });
-                                        });
-                                        bot.editMessageText({
-                                            chat_id:rese['user_id'],
-                                            message_id:rese['message_id'],
-                                            text:text.things_with+'\t'+resi['alphabet']+ ':',
-                                        });
-                                        usermodeluser.update({user_id: rese['user_id']}, {level: 'accident_game13'}, (err, res) => {
-                                            if (err) {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                });
-                        }
-                    });
-                }
-            });
-        }
-    });
+    const acc_game = new accidentgame(text.organ_with , text.things_with, 'things', 'accident_game13');
+    return(acc_game.func(update, res, 'things'));
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -3384,9 +1608,10 @@ function accident_game13(update, res) {
                             find_main(update, res)
                                 .then((resq) => {
                                     if (resq === 1) {
-                                        rese['organ'] = update['message']['text']+'\t'+10;
+                                        rese['counter']++;
                                         rese.save();
-                                        rese['fake_point'] = rese['fake_point'] + 10;
+                                        rese['organ'] = update['message']['text']+'\t'+10;
+                                        rese['fake_point'] = rese['counter'] * 10;
                                         rese.save();
                                         bot.sendMessage({
                                             chat_id: rese['user_id'],
