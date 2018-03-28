@@ -33,7 +33,11 @@ const strs = {
         custom_vip_game:'بازی شخصی سازی شده 10 نفره',
         idk:'نمیدونم',
         help:'کمک',
-        stop:'استپ'
+        stop:'استپ',
+        again:'بازی دوباره',
+        reject:'انصراف',
+        agree:'تمایل دارم',
+        disagree:'تمایلی ندارم',
     }
 };
 
@@ -63,11 +67,27 @@ const text = {
     idk0point:'نمیدونم 0 امتیاز',
     you_dont_have_enough_coin:'شما به اندازه کافی سکه ندارید',
     end_game:'بازی تمام شد'+'\n'+ 'برای توقف بازی روی دکمه استپ بزنید',
+    come_to_play:'بیا بازی 😉😉',
+    you_are_in_game:'شما قبلا وارد بازی شدید 😑😑',
+    length_of_player:'تعداد بازی کنان دعوت شده',
+    point:'امتیاز',
+    game_with:'بازی توسط',
+    stoping:'استپ شد',
+    winner:'برنده',
+    addpoint:'جمع امتیازات',
+    request:'درخواست بازی برای حریف ارسال شد'+'\n'+'\n'+'در صورت تایید بازی شروع میشود',
+    request2:'حریف شما در خواست بازی دارد'+'\n'+'\n'+'در صورت تمایل روی دکمه بازی دوباره بزنید',
+    accept:'درخواست بازی از هر دوطرف قبول شد',
 };
 
 /////////////////////////////////////////////////////////////////////
 
 let user = new mongoose.Schema({
+    vip_length:[],
+    vip_link:{
+      type:String,
+      default:""
+    },
     counter:{
         type:Number,
         default:0,
@@ -92,6 +112,10 @@ let user = new mongoose.Schema({
         type:String,
         default:'begin'
     },
+    again_game:{
+      type:Boolean,
+      default:false,
+    },
     fake_point:[{}],
     message_id:Number,
     callback:Number,
@@ -107,6 +131,10 @@ let user = new mongoose.Schema({
     organ:String,
     things:String,
     fruit:String,
+});
+let all_user_id = new mongoose.Schema({
+    user_id:[],
+    name:String,
 });
 let lobby = new mongoose.Schema({
     name:String,
@@ -159,6 +187,7 @@ let alllobby = new mongoose.Schema({
     name:String,
 });
 
+let usermodelalluserid = mongoose.model('all_user_ids', all_user_id);
 let usermodelalllobby = mongoose.model('all_lobbies',alllobby);
 let usermodellobby = mongoose.model('lobbies',lobby);
 let usermodeluser = mongoose.model('users',user);
@@ -168,7 +197,6 @@ let usermodelservey = mongoose.model('servey',servey);
 //////////////////////////////////////////////////////////////////////
 
 let update_id = 0;
-let memcache_key = "vCH1vGWJxfSeofSAs0K5PA";
 
 //////////////////////////////////////////////////////////////////////
 
@@ -198,36 +226,40 @@ function process(update) {
         if(err){
             throw err;
         }
-        else{
-            if(res === null){
+        else {
+            if (res === null) {
                 let user = new usermodeluser({
-                    own_name:update['message']['chat']['first_name'],
-                    own_last_name:update['message']['chat']['last_name'],
-                    user_id:update['message']['chat']['id'],
-                    first_name:'0',
-                    last_name:'0',
-                    color:'0',
-                    food:'0',
-                    city:'0',
-                    country:'0',
-                    car:'0',
-                    flower:'0',
-                    animal:'0',
-                    organ:'0',
-                    things:'0',
-                    fruit:'0',
+                    own_name: update['message']['chat']['first_name'],
+                    own_last_name: update['message']['chat']['last_name'],
+                    user_id: update['message']['chat']['id'],
+                    first_name: '0',
+                    last_name: '0',
+                    color: '0',
+                    food: '0',
+                    city: '0',
+                    country: '0',
+                    car: '0',
+                    flower: '0',
+                    animal: '0',
+                    organ: '0',
+                    things: '0',
+                    fruit: '0',
                 });
-                user.save((err, res) =>{
-                    if(err){
+                user.save((err, res) => {
+                    if (err) {
                         throw err;
                     }
-                    else{
+                    else {
+                        add_vip2(update, res);
                         level_process(update, res);
+                        add_vip_link(update, res);
                     }
                 });
             }
-            else{
+            else {
+                add_vip2(update, res);
                 level_process(update, res);
+                add_vip_link(update, res);
             }
         }
     });
@@ -236,6 +268,46 @@ function process(update) {
 //////////////////////////////////////////////////////////////////////
 
 function level_process(update, res) {
+    usermodelalluserid.findOne({name:res['name']},(err, rese) => {
+        if(err){
+            throw err;
+        }
+        else{
+            if (rese === null) {
+                let alluser = new usermodelalluserid({});
+                alluser.save((err, resw) => {
+                    if(err){
+                        throw err;
+                    }
+                    else{
+                        usermodelalluserid.update({name: resw['name']}, {$push: {user_id: res['user_id']}}, (err, res) => {
+                            if (err) {
+                                throw err;
+                            }
+                        });
+                    }
+                });
+            }
+            else{
+                let counter =0;
+                rese['user_id'].forEach((id) => {
+                    if(update['message']['chat']['id'] === id){
+
+                    }
+                    else{
+                        counter++
+                    }
+                });
+                if(rese['user_id'].length === counter){
+                    usermodelalluserid.update({name: rese['name']}, {$push: {user_id: res['user_id']}}, (err, res) => {
+                        if (err) {
+                            throw err;
+                        }
+                    });
+                }
+            }
+        }
+    });
     if(update['message']['text'] === '/start'){
         start(update, res);
     }
@@ -254,10 +326,7 @@ function level_process(update, res) {
 
         }
         else{
-            bot.sendMessage({
-                chat_id:res['user_id'],
-                text:text.invalid
-            });
+            invalid(update, res);
         }
     }
     else if(res['level'] === 'profile'){
@@ -271,10 +340,7 @@ function level_process(update, res) {
             view_profile(update, res);
         }
         else{
-            bot.sendMessage({
-                chat_id:res['user_id'],
-                text:text.invalid
-            });
+            invalid(update, res);
         }
     }
     else if(res['level'] === 'profile2'){
@@ -297,10 +363,7 @@ function level_process(update, res) {
             menu(update, res);
         }
         else{
-            bot.sendMessage({
-                chat_id:res['user_id'],
-                text:text.invalid
-            });
+            invalid(update, res);
         }
     }
     else if(res['level'] === 'vip'){
@@ -345,10 +408,13 @@ function level_process(update, res) {
     else if(res['level'] === 'accident_game14'){
         accident_game14(update, res);
     }
+    else if(res['level'] === 'result') {
+        accident_game15(update, res);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////
-// +'\t'+'telegram.me/esme_famile_bot?start'
+
 function start(update, res) {
     usermodeluser.findOne({user_id:res['user_id']}, (err, res) => {
         if(err){
@@ -364,7 +430,6 @@ function start(update, res) {
                     ],
                     resize_keyboard:true,
                     one_time_keyboard:true,
-                    $wasForceClosed:true
                 }
             });
             usermodeluser.update({user_id:res['user_id']}, {level:'menu'}, (err, res) => {
@@ -415,7 +480,7 @@ function profile(update, res) {
             if(res['username'] === undefined){
                 bot.sendMessage({
                     chat_id:res['user_id'],
-                    text:text.laugh+'\t'+'telegram.me/esme_famile_bot?start='+memcache_key,
+                    text:text.laugh,
                     reply_markup:{
                         keyboard:[
                             [{text:strs.main_menu.add_username}, {text:strs.main_menu.your_profile}],
@@ -758,6 +823,11 @@ function accident_game(update, res) {
                                                                                                             if(err){
                                                                                                                 throw err;
                                                                                                             }
+                                                                                                        });
+                                                                                                        usermodellobby.update({name:rese['name']}, {full:true}, (err, res) =>{
+                                                                                                            if(err){
+                                                                                                                throw err;
+                                                                                                            }
                                                                                                         })
                                                                                                     });
                                                                                                 });
@@ -867,19 +937,173 @@ function VIP(update, res) {
 /////////////////////////////////////////////////////////////////////////////////
 
 function add_vip(update, res) {
-     usermodeluser.findOne({user_id:res['user_id']}, (err, res) => {
+     usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
          if(err){
              throw err;
          }
          else{
              if(update['message']['text'] === strs.main_menu.join){
                  bot.sendMessage({
-                     chat_id:res['user_id'],
-                     text:text.link
+                     chat_id:rese['user_id'],
+                     text:text.link,
+                 }).then(() => {
+                     bot.sendMessage({
+                         chat_id:rese['user_id'],
+                         text:text.come_to_play+'\n'+'\n'+'telegram.me/esme_famile_bot?start='+rese['user_id'],
+                     }).then(()=>{
+                         usermodeluser.update({user_id:rese['user_id']},{vip_link:'/start'+' '+rese['user_id'], level:'menu'},(err, res) => {
+                             if(err){
+                                 throw err
+                             }
+                         });
+                         bot.sendMessage({
+                             chat_id:rese['user_id'],
+                             text:text.length_of_player+':'+'\t'+rese['vip_length'].length,
+                             reply_markup:{
+                                 keyboard:[
+                                     [{text:strs.main_menu.profile},{text:strs.main_menu.other_game}],[{text:strs.main_menu.opinion}, {text:strs.main_menu.accident_game}]
+                                 ],
+                                 resize_keyboard:true,
+                                 one_time_keyboard:true
+                             }
+                         })
+                     })
                  });
+             }
+             else{
+                 invalid(update, res);
              }
          }
      });
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+function add_vip_link(update, res) {
+    usermodeluser.findOne({user_id:res['user_id']}, (err, rese) => {
+        if(err){
+            throw err;
+        }
+        else{
+            usermodeluser.find({name:res['name']},(err, reso) => {
+                if(err){
+                    throw err;
+                }
+                else{
+                    usermodelalluserid.findOne({name:res['name']}, (err, resu) => {
+                        if(err){
+                            throw err;
+                        }
+                        else{
+                            reso.forEach((user_id) => {
+                                if(update['message']['text'] === user_id['vip_link']) {
+                                    reso.forEach((id) => {
+                                        if (rese['user_id'] === id['user_id']) {
+                                            if (rese['level'] === 'begin') {
+                                                usermodeluser.update({user_id: user_id['user_id']}, {$push: {vip_length: rese['user_id']}}, (err, resq) => {
+                                                    if (err) {
+                                                        throw err;
+                                                    }
+                                                });
+                                                bot.sendMessage({
+                                                    chat_id: rese['user_id'],
+                                                    text: text.welcome,
+                                                    reply_markup: {
+                                                        keyboard: [
+                                                            [{text: strs.main_menu.profile}, {text: strs.main_menu.other_game}], [{text: strs.main_menu.opinion}, {text: strs.main_menu.accident_game}]
+                                                        ],
+                                                        resize_keyboard: true,
+                                                        one_time_keyboard: true,
+                                                    }
+                                                });
+                                                usermodeluser.update({user_id: rese['user_id']}, {level: 'menu'}, (err, res) => {
+                                                    if (err) {
+                                                        throw err;
+                                                    }
+                                                });
+                                            }
+                                            else {
+                                                bot.sendMessage({
+                                                    chat_id: rese['user_id'],
+                                                    text: text.you_are_in_game,
+                                                    reply_markup: {
+                                                        keyboard: [
+                                                            [{text: strs.main_menu.profile}, {text: strs.main_menu.other_game}], [{text: strs.main_menu.opinion}, {text: strs.main_menu.accident_game}]
+                                                        ],
+                                                        resize_keyboard: true,
+                                                        one_time_keyboard: true,
+                                                        $wasForceClosed: true
+                                                    }
+                                                }).then(() => {
+                                                    usermodeluser.update({user_id: user_id['user_id']}, {level: 'menu'}, (err, resq) => {
+                                                        if (err) {
+                                                            throw err;
+                                                        }
+                                                    });
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            })
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+
+function add_vip2(update, res) {
+    usermodeluser.findOne({name:res['name']}, (err, rese) => {
+        if(err){
+            throw err;
+        }
+        else{
+            if(rese['vip_length'].length === 5){
+                usermodeluser.update({name:rese['name']}, {vip:':P'}, (err, res) => {
+                    if(err){
+                        throw err;
+                    }
+                });
+            }
+        }
+    });
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+function invalid(update, res) {
+    usermodeluser.find({name:res['name']}, (err, rese) => {
+        if(err){
+            throw err;
+        }
+        else {
+            usermodelalluserid.findOne({name:res['name']}, (err, reso) => {
+                if(err){
+                    throw err;
+                }
+                else{
+                    let counter = 0;
+                    rese.forEach((id) => {
+                        if (id['vip_link'] === update['message']['text']) {
+                        }
+                        else {
+                            counter++
+                        }
+                    });
+                    if (counter === reso['user_id'].length) {
+                        bot.sendMessage({
+                            chat_id: update['message']['chat']['id'],
+                            text: text.invalid
+                        });
+                    }
+                }
+            });
+        }
+    })
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1619,7 +1843,7 @@ function accident_game13(update, res) {
                                             reply_markup: {
                                                 keyboard: [
                                                     [
-                                                        {text:text.stop}
+                                                        {text:strs.main_menu.stop}
                                                     ]
                                                 ],
                                                 resize_keyboard:true,
@@ -1646,7 +1870,7 @@ function accident_game13(update, res) {
                                             reply_markup: {
                                                 keyboard: [
                                                     [
-                                                        {text: text.stop}
+                                                        {text: strs.main_menu.stop}
                                                     ]
                                                 ],
                                                 resize_keyboard:true,
@@ -1687,45 +1911,48 @@ function accident_game14(update, res) {
                 }
                 else{
                     if(update['message']['text'] === strs.main_menu.stop && rese['level'] === 'accident_game14'){
-                        console.log(123)
-                        // usermodeluser.find({name:res['name']}, (err, res) => {
-                        //     if(err){
-                        //         throw err;
-                        //     }
-                        //     else{
-                        //
-                        //     }
-                        // });
                         reso['members'].forEach((id) => {
-                            console.log(id['user_id']);
-                            usermodeluser.update({user_id:id['user_id']}, {level:'accident_game14'},(err, res) => {
+                            usermodeluser.update({user_id:id['user_id']}, {level:'accident_game14'},(err, reszz) => {
                                 if(err){
                                     throw err;
                                 }
+                                else{
+                                    reso['end_name'] = update['message']['chat']['first_name'];
+                                    reso.save((err, resq) => {
+                                        if(err){
+                                            throw err;
+                                        }
+                                        else {
+                                            sort_first(id, reso)
+                                                .then((resee) => {
+                                                    sort_next(id, reso)
+                                                        .then((reseee) => {
+                                                            bot.sendMessage({
+                                                                chat_id: id['user_id'],
+                                                                text: text.game_with + '\t' + reso['end_name'] + '\t' + text.stoping + '\n' + '\n' + resee+'\n'+'\n'+'\n'+ reseee,
+                                                                reply_markup:{
+                                                                    keyboard:[
+                                                                        [{text:strs.main_menu.again}],[{text:strs.main_menu.reject}]
+                                                                    ],
+                                                                    resize_keyboard:true,
+                                                                    one_time_keyboard:true,
+                                                                }
+                                                            });
+                                                            usermodeluser.update({user_id:id['user_id']}, {level:'result'}, (err, res) => {
+                                                                if(err){
+                                                                    throw err;
+                                                                }
+                                                            })
+                                                        });
+                                                });
+                                        }
+                                    });
+                                }
                             });
-                        });
-                        reso['end_name'] = update['message']['chat']['first_name'];
-                        reso.save((err, resq) => {
-                            if(err){
-                                throw err;
-                            }
-                            else{
-                                console.log(reso['end_name']);
-                                let numArray = reso['fake_point'];
-                                numArray.sort(sortNumber);
-                                let counter= numArray.length;
-                                numArray.forEach((q) => {
-                                    counter--;
-                                    console.log(numArray[counter])
-                                });
-                            }
                         });
                     }
                     else{
-                        bot.sendMessage({
-                            chat_id:rese['user_id'],
-                            text:text.invalid
-                        });
+                        invalid(update, res);
                     }
                 }
             });
@@ -1735,15 +1962,227 @@ function accident_game14(update, res) {
 
 ////////////////////////////////////////////////////////////////////////////
 
-function sort_rait(update, res) {
-    usermodeluser.findOne({name:res['name']}, (err, res) => {
+function accident_game15(update, res) {
+    usermodeluser.findOne({name:res['name']}, (err, rese) => {
         if(err){
             throw err;
         }
         else{
-            let sort = res['fake_point']
+            usermodellobby.findOne({name:res['name']}, (err, resi) => {
+                if(err){
+                    throw err;
+                }
+                else{
+                    usermodeluser.update({name:rese['name']}, {again_game:true},(err, res) => {
+                        if(err){
+                            throw err;
+                        }
+                        else{
+                            usermodeluser.find({name:res['name']}, (err, reso) =>{
+                                if(err){
+                                    throw err;
+                                }
+                                else {
+                                    usermodelalluserid.findOne({name:res['name']}, (err, resq) => {
+                                        if(err){
+                                            throw err;
+                                        }
+                                        else {
+                                            if (update['message']['text'] === strs.main_menu.again) {
+                                                let counter = 0;
+                                                let conter = 0;
+                                                resi['members'].forEach((id) => {
+                                                    reso.forEach((iid) => {
+                                                        if (rese['user_id'] === id['user_id']) {
+                                                            conter++;
+                                                        }
+                                                        else {
+                                                            counter++;
+                                                        }
+                                                        if (resq['user_id'].length - 1 === conter) {
+                                                            bot.sendMessage({
+                                                                chat_id: rese['user_id'],
+                                                                text: text.request,
+                                                                reply_markup: {
+                                                                    keyboard: [
+                                                                        [{text: strs.main_menu.again}], [{text: strs.main_menu.reject}]
+                                                                    ],
+                                                                    resize_keyboard: true,
+                                                                    one_time_keyboard: true,
+                                                                }
+                                                            });
+                                                        }
+                                                        if (resq['user_id'].length === counter) {
+                                                            bot.sendMessage({
+                                                                chat_id: id['user_id'],
+                                                                text: text.request2,
+                                                                reply_markup: {
+                                                                    keyboard: [
+                                                                        [{text: strs.main_menu.agree}], [{text: strs.main_menu.disagree}]
+                                                                    ],
+                                                                    resize_keyboard: true,
+                                                                    one_time_keyboard: true,
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                });
+                                            }
+                                            if(update['message']['text'] === strs.main_menu.agree){
+                                                usermodeluser.findOne({user_id:update['message']['chat']['id']}, (err, rese) => {
+                                                    if(err){
+                                                        throw err;
+                                                    }
+                                                    else{
+                                                        usermodeluser.update({user_id:rese['user_id']},{again_game:true},(err, res) => {
+                                                            if(err){
+                                                                throw err;
+                                                            }
+                                                            else{
+                                                                let randomnumber = Math.floor(Math.random()*32);
+                                                                resi['members'].forEach((id) => {
+                                                                    reso.forEach((iid) => {
+                                                                        if (id['user_id'] === iid['user_id']) {
+                                                                            if (iid['again_game'] === true) {
+                                                                                usermodeluser.update({user_id:iid['user_id']}, {level:'accident_game2'},(err, res) =>{
+                                                                                    if(err){
+                                                                                        throw err;
+                                                                                    }
+                                                                                });
+                                                                                bot.sendMessage({
+                                                                                    chat_id: id['user_id'],
+                                                                                    text: text.accept,
+                                                                                }).then(() => {
+                                                                                    resi['alphabet'] = random(randomnumber);
+                                                                                    resi.save((err, r) => {
+                                                                                        if (err) {
+                                                                                            throw err;
+                                                                                        }
+                                                                                        else {
+                                                                                            resi['members'].forEach((name) => {
+                                                                                                bot.sendMessage({
+                                                                                                    chat_id: name['user_id'],
+                                                                                                    text: text.begin + '\n' + text.name_with + '\t' + resi['alphabet'] + ':',
+                                                                                                    reply_markup: {
+                                                                                                        inline_keyboard: [
+                                                                                                            [
+                                                                                                                {
+                                                                                                                    text: strs.main_menu.idk,
+                                                                                                                    callback_data: strs.main_menu.idk
+                                                                                                                }, {
+                                                                                                                text: strs.main_menu.help,
+                                                                                                                callback_data: strs.main_menu.help
+                                                                                                            }
+                                                                                                            ]
+                                                                                                        ]
+                                                                                                    }
+                                                                                                }).then((res) => {
+                                                                                                    usermodeluser.update({user_id: name['user_id']}, {message_id: res['result']['message_id']}, (err, res) => {
+                                                                                                        if (err) {
+                                                                                                            throw err;
+                                                                                                        }
+                                                                                                    });
+                                                                                                });
+                                                                                            });
+                                                                                        }
+                                                                                    });
+                                                                                });
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                });
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
     });
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+function sort_first(rese, reso) {
+    let promise1 = new Promise(((resolve, reject) => {
+        let temp = '';
+        usermodeluser.find({name:rese['name']}, (err, resi) =>{
+            if(err){
+                throw err;
+            }
+            else {
+                usermodellobby.findOne({name: reso['name']}, (err, resa) => {
+                    if (err) {
+                        throw err;
+                    }
+                    else {
+                        let conter = 0;
+                        resa['members'].forEach((id) => {
+                            conter++;
+                            resi.forEach((ede) => {
+                                if(id['user_id'] === ede['user_id']){
+                                    let numArray = ede['fake_point'];
+                                    numArray.sort(sortNumber);
+                                    let counter = numArray.length;
+                                    numArray.forEach((g) => {
+                                        counter--;
+                                        temp = temp + conter + '-' + ede['own_name'] + '\t' + ':' + [numArray[counter]] + text.point + '\n';
+                                    });
+                                }
+                            });
+                        });
+                        resolve(temp)
+                    }
+                });
+            }
+        });
+    }));
+    return (promise1);
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+function sort_next(rese, reso) {
+    let promise1 = new Promise(((resolve, reject) => {
+        let temp = '';
+        usermodeluser.find({name:rese['name']}, (err, resi) =>{
+            if(err){
+                throw err;
+            }
+            else {
+                usermodellobby.findOne({name: reso['name']}, (err, resa) => {
+                    if (err) {
+                        throw err;
+                    }
+                    else {
+                        let conter = 0;
+                        resa['members'].forEach((id) => {
+                            resi.forEach((ede) => {
+                                if(id['user_id'] === ede['user_id']) {
+                                    temp = temp + ede['own_name'] + '\n' + ede['first_name']+','+ede['last_name']+','+ede['color']+','+ede['food']+','+ede['city']+','+ede['country']+','+ede['car']+','+ede['flower']+','+ede['animal']+','+ede['things']+','+ede['organ']+"\n"+'\n'+text.addpoint+':'+ede['fake_point']+'\n'+'➖➖➖'+'\n';
+                                }
+                            });
+                        });
+                        resolve(temp)
+                    }
+                });
+            }
+        });
+    }));
+    return (promise1);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+function sort_third() {
+
 }
 
 ////////////////////////////////////////////////////////////////////////////
